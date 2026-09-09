@@ -218,7 +218,7 @@ PALETTE_POOL = [
 ]
 
 
-def build_tree(rows, labels, max_examples):
+def build_tree(rows, labels, max_examples, root_label=None):
     macro_map = OrderedDict()
     for row in rows:
         mids = macro_map.setdefault(row["macro_source"], defaultdict(lambda: defaultdict(list)))
@@ -254,7 +254,8 @@ def build_tree(rows, labels, max_examples):
             "value": sum(n["value"] for n in mid_nodes), "children": mid_nodes,
         })
     macros.sort(key=lambda n: (-n["value"], n["name"]))
-    root_label = labels.get("__root__", "All")
+    if not root_label:
+        root_label = labels.get("__root__", "All")
     return {"name": "__root__", "label": root_label,
             "value": sum(n["value"] for n in macros), "children": macros}
 
@@ -287,9 +288,14 @@ def main():
 
     groups = OrderedDict()
     if args.group_field:
+        # Add "All" option at the very beginning to aggregate all rows
+        all_label = "全部 (All)"
+        groups[all_label] = build_tree(rows, labels, args.max_examples, root_label=all_label)
+
         for value in sorted({r.get(args.group_field, "") for r in rows}):
             subset = [r for r in rows if r.get(args.group_field, "") == value]
-            groups[value or "(blank)"] = build_tree(subset, labels, args.max_examples)
+            group_name = value or "(blank)"
+            groups[group_name] = build_tree(subset, labels, args.max_examples, root_label=group_name)
     else:
         groups["all"] = build_tree(rows, labels, args.max_examples)
 
