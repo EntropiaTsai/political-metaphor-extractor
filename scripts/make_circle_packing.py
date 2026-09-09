@@ -302,8 +302,19 @@ def main():
     macro_names = sorted({r["macro_source"] for r in rows})
     palette = {name: PALETTE_POOL[i % len(PALETTE_POOL)] for i, name in enumerate(macro_names)}
 
+    # Automatically prepend dataset identifier if found in cwd or output path (e.g. metaphor_立院質詢 -> 立院質詢)
+    title = args.title
+    cwd = Path.cwd()
+    identifier = ""
+    for part in list(Path(args.output).resolve().parts) + [cwd.name]:
+        if part.startswith("metaphor_"):
+            identifier = part[len("metaphor_"):]
+            break
+    if identifier and identifier not in title:
+        title = f"{identifier}：{title}"
+
     html = (TEMPLATE
-            .replace("__TITLE__", args.title)
+            .replace("__TITLE__", title)
             .replace("__D3_SRC__", args.d3_src)
             .replace("__PALETTE__", json.dumps(palette, ensure_ascii=False))
             .replace("__DATA__", json.dumps({"groups": groups}, ensure_ascii=False)))
