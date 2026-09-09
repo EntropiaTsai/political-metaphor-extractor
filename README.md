@@ -12,16 +12,22 @@ Political Metaphor Extractor（以下簡稱 **PME**）是一個 Agent Skill，�
 
 > 我想要使用這個 skill https://github.com/EntropiaTsai/political-metaphor-extractor
 
-它會自己下載、放到正確的位置，然後告訴你裝好了。之後每次開新對話都能用，不必重裝。
+它會先問你要裝成整台電腦都能用、還是只在目前這個專案裡用，然後自己下載安裝並告訴你放在哪裡。裝一次就好，之後每次開新對話都叫得動。
+
+自己一個人做研究就選整台電腦都能用；如果你在一個要跟別人共用的專案資料夾裡工作，選只在這個專案，它會跟著專案一起分享給協作者。
 
 <details>
 <summary>給正在讀這段的 agent：安裝指示（使用者可略過）</summary>
 
-把整個 repo clone 下來，資料夾名稱保持 `political-metaphor-extractor`，放進下表對應的個人 skills 目錄，裝完用白話告訴使用者放在哪裡、之後怎麼觸發。
+把整個 repo clone 下來，資料夾名稱保持 `political-metaphor-extractor`，放進下表對應的位置，裝完用白話告訴使用者放在哪裡、之後怎麼觸發。
 
-安裝前先確認你跑在哪個工具裡。**要判斷的是執行環境，不是你的模型**——在 Cursor 裡執行的 Claude 模型屬於 Cursor，該裝 `~/.cursor/skills/`。判斷不出來就直接問使用者一句「你現在用的是哪個工具？」，這比猜錯好；若當下無法詢問，才退而用 `~/.claude/skills/`，Claude Code 與 Cursor 都會載入它。
+**動手前要問使用者兩件事。**
 
-| 工具 | 個人（所有專案可用） | 單一專案 |
+第一，裝的範圍。用白話問：「要裝成整台電腦都能用，還是只在這個專案裡用？」整台電腦能用（個人層級）適合自己一個人做研究，之後開任何專案都叫得動；只在這個專案用（專案層級）則會跟著這個資料夾的 git 一起分享給協作者，也方便為這批語料單獨調整分類架構。研究者多半要的是前者，但**不要替他決定**，尤其他正在一個共用的研究專案裡工作時。
+
+第二，你跑在哪個工具裡。**要判斷的是執行環境，不是你的模型**——在 Cursor 裡執行的 Claude 模型屬於 Cursor，該裝 `~/.cursor/skills/`。判斷不出來就一起問使用者，這比猜錯好；若當下無法詢問，才退而用 `~/.claude/skills/`，Claude Code 與 Cursor 都會載入它。
+
+| 工具 | 整台電腦（個人層級） | 只在這個專案 |
 |---|---|---|
 | Claude Code | `~/.claude/skills/` | `.claude/skills/` |
 | Cursor | `~/.cursor/skills/` | `.cursor/skills/` |
@@ -29,12 +35,14 @@ Political Metaphor Extractor（以下簡稱 **PME**）是一個 Agent Skill，�
 
 `~/.agents/skills/` 是跨工具的通用慣例，Cursor 會讀，但 Claude Code 目前只讀 `.claude` 系列。**同一台機器只裝一份**——裝在多個位置之後改動不會互相同步，很難追是哪一份在生效。安裝前先看看其他位置是不是已經有同名資料夾，有的話更新既有那份，不要再開一份。
 
-安裝指令：
+安裝指令，路徑換成上面問出來的位置：
 
 ```bash
 git clone https://github.com/EntropiaTsai/political-metaphor-extractor.git \
   ~/.claude/skills/political-metaphor-extractor
 ```
+
+裝在專案層級時提醒使用者：這個資料夾會被 git 追蹤，commit 之後協作者 clone 下來就能直接用。
 
 Claude Code 的注意事項：如果 `~/.claude/skills/` 是這次才第一次建立，要提醒使用者重啟 Claude Code 才會開始監看它。
 
