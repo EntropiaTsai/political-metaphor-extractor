@@ -9,6 +9,14 @@ description: 從政治文本語料中抽取概念性隱喻，建立 macro/mid/su
 
 **產出**：每則隱喻一列的 CSV（含原始例句）→ 三層來源域本體 → 頻率統計表 → 互動式視覺化。
 
+## 對話原則
+
+使用者多半是語言學或社會科學的研究者，不是開發者。**整個流程由你執行，不要要求使用者打開終端機、輸入指令或自己編輯設定檔。**
+
+所有指令你自己跑，不要把指令貼給使用者叫他複製。`taxonomy.yaml`、`hierarchy_rules.yaml` 與 prompt 的修改由你代筆，動手前用自然語言說明你要加什麼、為什麼，得到同意再改。使用者給什麼格式的語料你就接什麼——Excel、Word 裡貼出來的純文字、CSV 都行，轉成 JSONL 是你的工作，不要叫他先自己整理。產生視覺化之後直接用 `open`（macOS）或 `xdg-open`（Linux）幫他打開，不要只丟一個檔案路徑。
+
+報告結果時避免術語。「殘差桶佔 23%」要講成「有 23% 的隱喻還沒分進細類，我建議補幾條規則再跑一次」。需要使用者做判斷時，把選項和後果講清楚再問，不要預設他知道 YAML、CSV 或 venv 是什麼。
+
 ## 方法核心
 
 整套流程只有三個關鍵設計，其餘都是工程細節：
@@ -31,26 +39,63 @@ description: 從政治文本語料中抽取概念性隱喻，建立 macro/mid/su
 
 ## 開始之前
 
-下面的指令用 `<skill>` 代表這個 skill 目錄的實際路徑（專案安裝時是 `.cursor/skills/political-metaphor-extractor`），執行時請替換成真實路徑。腳本需要 Python 3.9 以上與 PyYAML，其餘都是標準函式庫。
+下面的指令用 `<skill>` 代表這個 skill 目錄的實際路徑，執行時請替換成真實路徑。它會隨安裝位置不同，常見的是 `~/.claude/skills/political-metaphor-extractor`、`~/.cursor/skills/political-metaphor-extractor`，或專案內的 `.claude/skills/political-metaphor-extractor`。需要 Python 3.9 以上；相依套件只有 PyYAML，其餘都是標準函式庫。
 
-先把設定檔複製到使用者的工作目錄，讓他可以自由修改而不動到 skill 本體：
+### 先問：結果要不要保存
+
+這個決定會改變工作目錄放在哪裡，所以**必須在建目錄之前問**，不要跑完才問。問使用者一句：「分析結果要保存下來，還是看過就好？」
+
+**要保存**時，在使用者指定的位置建目錄（沒指定就用目前專案根目錄），命名為 `metaphor_<識別名>`，識別名要讓人事後看得出是哪批語料，例如 `metaphor_ptt2014`、`metaphor_立院質詢`。跑完把絕對路徑告訴使用者。
+
+**看過就好**時，建在系統暫存目錄底下：
 
 ```bash
-mkdir -p metaphor && cd metaphor
+WORK=$(mktemp -d)/metaphor_tmp && mkdir -p "$WORK" && cd "$WORK"
+```
+
+跑完把統計表直接貼在對話裡、把視覺化 HTML 開給使用者看，**確認他看過之後主動刪掉整個目錄並回報已清理**。不要默默留著——這些目錄含一個 venv，每個約數十 MB，累積幾次就很可觀，而使用者不會記得自己有這些東西。
+
+不管哪一種都用 `metaphor_` 開頭，日後 `ls -d metaphor_*` 就能一次找出全部來清理。
+
+**不要重複使用既有的 `metaphor_*` 目錄**，除非使用者明講要接續上次的工作。同名目錄裡的 `out/tvg.csv` 與 `out/mapped.csv` 會被無聲覆蓋，那是逐則標註的成果，重跑要重花時間與金錢，而且 `temperature` 設 0 也不保證逐字重現。相對地，`hierarchy.csv`、`stats_*.csv`、`hierarchy.html` 這些從 `mapped.csv` 幾秒就能重生的產物，覆蓋沒有關係——步驟 8 到 9 本來就要反覆重跑。
+
+### 建立工作目錄
+
+把設定檔複製進去，讓使用者可以自由修改而不動到 skill 本體：
+
+```bash
 cp -r <skill>/assets/* .
 ```
 
 得到 `config.yaml`、`taxonomy.yaml`、`hierarchy_rules.yaml`、`prompts/`、`sample_corpus.jsonl`。
 
+接著要準備 Python 環境。**安裝任何套件之前一定要先問過使用者，得到同意才動手**，而且要用白話問，不要丟術語。例如：
+
+> 我需要在這個資料夾裡建一個獨立的 Python 環境，只安裝一個叫 PyYAML 的小套件，大約幾十 MB。它不會影響你電腦上其他程式，之後刪掉資料夾就清乾淨了。可以嗎？
+
+venv 放在工作目錄內是刻意的，刪掉目錄就一併清乾淨。使用者若拒絕或說他已經有慣用環境（conda、既有 venv、系統已裝好 PyYAML），就照他的方式走，把下面指令的 `.venv/bin/python` 換成他指定的直譯器。
+
+預設做法是建虛擬環境，**不是選配**——近年的 macOS 與 Homebrew Python 會擋下對系統環境的 `pip install`（`externally-managed-environment`），裝進 venv 一次避開這個問題：
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -q pyyaml
+.venv/bin/python -c "import yaml; print('env ready')"
+```
+
+看到 `env ready` 才往下走。**後面所有指令都用 `.venv/bin/python`，不要用 `python3`**，否則會落回沒有 PyYAML 的系統環境。所有指令都假設你的工作目錄停在剛才建的 `metaphor_*` 底下，路徑都以它為基準。
+
+極少數精簡版 Python 沒有帶 venv 模組，`python3 -m venv` 會直接失敗。這種情況要**再問一次使用者**才能改用 `pip3 install --user pyyaml`，因為它會裝進使用者的家目錄而非拋棄式的 venv；同意之後，後續指令維持 `python3`。
+
 **每次改完這些檔案都要驗證一次**：
 
 ```bash
-python3 <skill>/scripts/validate_config.py --config config.yaml --rules hierarchy_rules.yaml
+.venv/bin/python <skill>/scripts/validate_config.py --config config.yaml --rules hierarchy_rules.yaml
 ```
 
 它檢查的是那些不會當場報錯、只會讓資料靜默流失的矛盾：prompt 的 few-shot 範例教了白名單不接受的標籤、中層規則寫在一個永遠不會出現的 macro 底下、alias 折疊到白名單外的標籤、prompt 佔位符被刪掉。有 error 就先修完再往下跑，否則你會跑完幾千則才發現一整類映射都被丟掉了。
 
-接著把使用者的語料整理成 JSONL，一行一則，**只有 `id` 和 `text` 是必要欄位**：
+接著把使用者的語料轉成 JSONL，一行一則，**只有 `id` 和 `text` 是必要欄位**。轉檔是你的工作：使用者可能給你 Excel、Word 貼過來的純文字、爬蟲的 CSV 或一個裝滿 txt 的資料夾，你負責讀進來、切成分析單位、補上 `id`，不要要求他先自己整理成特定格式。沒有現成 id 就照順序編（`doc001`、`doc002`……）。
 
 ```json
 {"id": "doc001", "period": "2014", "text": "這群立委根本就是政黨養的走狗……"}
@@ -117,7 +162,7 @@ python3 <skill>/scripts/validate_config.py --config config.yaml --rules hierarch
 ### 步驟 5：轉成 CSV
 
 ```bash
-python3 <skill>/scripts/ingest_annotations.py --stage tvg \
+.venv/bin/python <skill>/scripts/ingest_annotations.py --stage tvg \
     --corpus corpus.jsonl --input annotations.json \
     --output out/tvg.csv --carry-fields period
 ```
@@ -141,7 +186,7 @@ python3 <skill>/scripts/ingest_annotations.py --stage tvg \
 ### 步驟 7：套用 taxonomy
 
 ```bash
-python3 <skill>/scripts/ingest_annotations.py --stage map \
+.venv/bin/python <skill>/scripts/ingest_annotations.py --stage map \
     --tvg out/tvg.csv --taxonomy taxonomy.yaml \
     --input mappings.json --output out/mapped.csv
 ```
@@ -169,7 +214,7 @@ mid_source:
 比對方式是拿關鍵詞去 `vehicle + ground` 做子字串比對，**長詞優先**，所以 `走狗` 會正確落在「狗」而不會被更短的規則搶走。沒寫規則的 macro domain 會直接用自己當中層標籤。
 
 ```bash
-python3 <skill>/scripts/build_hierarchy.py --input out/mapped.csv \
+.venv/bin/python <skill>/scripts/build_hierarchy.py --input out/mapped.csv \
     --rules hierarchy_rules.yaml --outdir out/ --group-field period
 ```
 
@@ -186,22 +231,40 @@ python3 <skill>/scripts/build_hierarchy.py --input out/mapped.csv \
 ### 步驟 10：視覺化
 
 ```bash
-python3 <skill>/scripts/make_circle_packing.py --input out/hierarchy.csv \
+.venv/bin/python <skill>/scripts/make_circle_packing.py --input out/hierarchy.csv \
     --output out/hierarchy.html --group-field period \
     --title "政治隱喻來源域"
 ```
 
-單一 HTML 檔，點圓圈往下鑽一層，點背景往上退，第三層列出原始例句。`--group-field` 會生出切換鈕做跨組比較（如不同年份）。
+產生後直接幫使用者打開，不要只回報路徑：
+
+```bash
+open out/hierarchy.html        # Linux 用 xdg-open
+```
+
+單一 HTML 檔，點圓圈往下鑽一層，點背景往上退，第三層列出原始例句。`--group-field` 會生出切換鈕做跨組比較（如不同年份）。這些操作方式要主動講給使用者聽，他不會自己猜到可以點。
 
 離線展示時用 `--d3-src ./d3.v7.min.js` 指向本機 d3，預設走 CDN。
 
+### 步驟 11：交付與收尾
+
+不論使用者選哪一種保存方式，都把 `stats_macro.csv` 與 `stats_mid.csv` 的內容整理成表格直接貼在對話裡，並附上殘差比例與被拒絕的標籤數量。使用者要看的是結論，不是一句「檔案在那邊，自己去開」。
+
+選了**保存**的，最後回報工作目錄的絕對路徑，並列出裡面哪幾個檔案是他之後會用到的（`hierarchy.csv` 給後續分析、`hierarchy.html` 給簡報、三個設定檔給論文附錄）。
+
+選了**看過就好**的，先把 HTML 開起來給他看，等他確認看完，再刪掉整個 `metaphor_*` 暫存目錄並回報已清理。刪之前多問一句「有沒有要留下來的？」——他有可能看完才改變主意，這時把目錄搬到他指定的位置即可，不要重跑一次。
+
 ## 腳本模式
 
-語料上千則時改用這條路。使用者需要自己的 API key，寫進自己的 `.env`（**不要提交到版控**）：
+語料上千則時改用這條路。這是唯一需要 API key 的環節，而使用者不見得有，也不見得知道去哪申請——**先確認他手上有金鑰再往下談**，沒有的話說明要去模型供應商的網站申請、大致費用怎麼算，讓他決定要不要走這條路，或是改成分批用 agent 模式慢慢跑。
+
+金鑰由你寫進工作目錄的 `.env`，不要叫使用者自己開終端機或編輯器。請他在對話裡貼給你之前，先提醒一句：貼進對話等於留在對話紀錄裡，如果他介意，可以改由他自己把金鑰填進 `.env`，你只要告訴他檔案路徑和格式就好。
 
 ```bash
-echo 'GEMINI_API_KEY=你的金鑰' >> .env
+echo 'GEMINI_API_KEY=使用者提供的金鑰' >> .env
 ```
+
+`.env` 絕對不要提交到版控。
 
 `config.yaml` 裡只記錄要去哪個環境變數找 key，不存金鑰本身。任何 OpenAI 相容端點都可以，改 `base_url` 與 `api_key_env` 即可。
 
@@ -209,13 +272,13 @@ echo 'GEMINI_API_KEY=你的金鑰' >> .env
 S=<skill>/scripts
 
 # 先 dry-run 確認讀檔與設定正確，不會送出請求
-python3 $S/extract_tvg.py --config config.yaml --input corpus.jsonl \
+.venv/bin/python $S/extract_tvg.py --config config.yaml --input corpus.jsonl \
     --output out/tvg.csv --carry-fields period --dry-run
 
-python3 $S/extract_tvg.py --config config.yaml --input corpus.jsonl \
+.venv/bin/python $S/extract_tvg.py --config config.yaml --input corpus.jsonl \
     --output out/tvg.csv --carry-fields period
 
-python3 $S/map_domains.py --config config.yaml \
+.venv/bin/python $S/map_domains.py --config config.yaml \
     --input out/tvg.csv --output out/mapped.csv
 ```
 
@@ -251,13 +314,15 @@ python3 $S/map_domains.py --config config.yaml \
 **穩定性不等於準確率。** `stability_check.py` 對同一批樣本重跑多次，量測 domain pair 的 Jaccard 一致性：
 
 ```bash
-python3 <skill>/scripts/stability_check.py --config config.yaml \
+.venv/bin/python <skill>/scripts/stability_check.py --config config.yaml \
     --input corpus.jsonl --sample 40 --runs 3 --outdir out/stability
 ```
 
 它只告訴你「其他條件不變時輸出會晃多少」。要主張準確率，必須人工逐筆看過一定規模的樣本，且要在論文裡分別報告這兩個數字，不要混為一談。
 
-**一定要人工抽查。** 至少隨機抽 50 筆讀過。重點看三件事：Ground 是否真的支撐跨域映射、Tenor 是否與該則的語意焦點一致、以及有沒有把代稱當成隱喻。
+**一定要人工抽查。** 至少隨機抽 50 筆讓使用者讀過。**把這 50 筆整理成表格貼在對話裡**，一次十幾筆分批呈現，不要叫他自己去開 CSV——他要做的是學術判斷，不是找檔案。每筆列出例句、Tenor、Vehicle、Ground 與指派的 domain，讓他能直接回「第 3 筆和第 7 筆不對」。
+
+重點看三件事：Ground 是否真的支撐跨域映射、Tenor 是否與該則的語意焦點一致、以及有沒有把代稱當成隱喻。這三個判準要在請他審查時一併說明，不能假設他記得。
 
 ## 常見陷阱
 
