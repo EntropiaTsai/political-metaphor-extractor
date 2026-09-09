@@ -1,0 +1,38 @@
+# Pipeline settings. Prompt and taxonomy paths are resolved relative to this file.
+
+llm:
+  # Any OpenAI-compatible endpoint works. Examples:
+  #   OpenAI  https://api.openai.com/v1
+  #   Gemini  https://generativelanguage.googleapis.com/v1beta/openai
+  #   Ollama  http://localhost:11434/v1
+  base_url: "https://generativelanguage.googleapis.com/v1beta/openai"
+  api_key_env: "GEMINI_API_KEY"
+  model: "gemini-2.5-flash"
+  temperature: 0.0        # keep at 0 — this is annotation, not writing
+  # Stage 1 answers are long. If you raise extract.batch_size, raise this too,
+  # or batches will be truncated and silently split.
+  max_tokens: 8000
+  timeout_seconds: 180
+  retries: 3
+  retry_backoff_seconds: 3.0
+  # Provider-specific knobs are passed through untouched, e.g.
+  # extra_body:
+  #   reasoning_effort: "medium"
+
+extract:
+  prompts:
+    system: "prompts/extract_system.md"
+    user: "prompts/extract_user.md"
+  batch_size: 6           # documents per request; lower this if quality drops
+  max_chars: 1800         # per-document truncation
+  fallback_chunk_size: 2  # split size when a batch fails to parse
+  sleep_seconds: 0.1
+
+map:
+  prompts:
+    system: "prompts/map_system.md"
+    user: "prompts/map_user.md"
+  taxonomy: "taxonomy.yaml"
+  batch_size: 20          # triples per request; this stage sees short fields
+  max_tokens: 4000
+  sleep_seconds: 0.05

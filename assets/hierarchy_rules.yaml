@@ -1,0 +1,61 @@
+# Stage 3: the mid layer between the macro source domain and the raw vehicle.
+#
+# This is the layer that pays off analytically and the one you should expect to
+# iterate on. Write rules only for the macro domains that are frequent enough
+# to be worth splitting; a macro domain with no rules block simply keeps its own
+# label as the mid label.
+#
+# Matching is substring-based against "vehicle + ground", longest keyword first,
+# so 走狗 wins over 狗. Anything unmatched lands in a residual bucket named
+# 其他<macro>, which build_hierarchy.py reports back to you — those reports are
+# the queue of rules still to write.
+
+macro_target: "政治"
+
+# Collapse near-duplicate target domains for the mid-level target layer.
+target_merge:
+  支持者群體: "政治群眾"
+  選民: "政治群眾"
+  群眾: "政治群眾"
+  政治立場: "政治主張"
+
+residual_prefix: "其他"
+
+mid_source:
+  動物:
+    狗: ["走狗", "馬狗", "瘋狗", "狗腿", "狗"]
+    猴: ["吱吱", "猴子", "猴"]
+    鳥: ["青鳥", "鳥籠", "鳥"]
+    蟲: ["蛆", "蟑螂", "寄生蟲", "蟲"]
+    牲畜: ["畜", "豬", "牛", "羊", "禽獸"]
+    猛獸: ["戰狼", "老虎", "獅", "狼"]
+
+  戰爭:
+    攻擊者: ["攻擊", "開戰", "出征", "圍剿", "砲轟", "開砲"]
+    防衛者: ["防衛", "守護", "干城", "捍衛", "護航"]
+    武器: ["武器", "飛彈", "子彈", "刀", "槍", "火力"]
+    戰場: ["戰場", "陣地", "前線", "戰線"]
+    軍隊: ["網軍", "部隊", "軍團", "大軍"]
+
+  戲劇/娛樂:
+    表演: ["作秀", "演戲", "表演", "戲碼", "劇本"]
+    舞台: ["舞台", "戲台", "後台"]
+    觀眾: ["觀眾", "看戲", "捧場"]
+
+  # 活動類：vehicle 是行為或事件時，taxonomy 會給 macro「犯罪」。
+  犯罪:
+    竊盜: ["偷", "竊", "盜", "搶"]
+    詐欺: ["詐騙", "騙", "話術", "唬"]
+    暴力: ["圍事", "恐嚇", "威脅", "尋仇"]
+
+  # 角色類：vehicle 是人時，taxonomy 的 alias 會把「黑道」「流氓」折成 macro
+  # 「犯罪者」，所以這些關鍵詞要寫在這裡，寫在上面的「犯罪」底下永遠不會命中。
+  犯罪者:
+    幫派份子: ["黑道", "流氓", "角頭", "兄弟"]
+    詐欺犯: ["詐騙集團", "騙子"]
+    竊賊: ["小偷", "強盜"]
+
+  宗教:
+    神祇: ["神", "菩薩", "上帝", "神明"]
+    信徒: ["信徒", "教徒", "膜拜", "信仰"]
+    邪教: ["邪教", "塔綠班", "教主"]

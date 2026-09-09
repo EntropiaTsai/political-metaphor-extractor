@@ -1,0 +1,83 @@
+# The label space for stage 2.
+#
+# These lists are injected into the mapping prompt AND enforced afterwards, so
+# the model and the validator can never disagree. Anything the model returns
+# outside these lists is discarded, not silently kept.
+#
+# This is a label space, not a trigger list. A domain must be supported by the
+# Tenor / Vehicle / Ground relation, never by the mere presence of a word.
+
+allowed_target_domains:
+  - "政治人物"
+  - "政治事件"
+  - "政黨"
+  - "政策"
+  - "政治主張"
+  - "政治立場"
+  - "政治攻防"
+  - "政治制度"
+  - "國家"
+  - "支持者群體"
+  - "選民"
+  - "群眾"
+  - "媒體"
+  - "法律"
+
+allowed_source_domains:
+  - "戰爭"
+  - "動物"
+  - "商業"
+  - "宗教"
+  - "戲劇/娛樂"
+  - "表演者"
+  - "家庭"
+  - "犯罪"
+  - "犯罪者"
+  - "階層"
+  - "廢棄物"
+  - "可操控的物件"
+  - "物理力量"
+  - "社群媒體"
+  - "認知"
+  - "人際互動"
+  - "人工物"
+  - "自然物"
+  - "生命體"
+
+# Value judgements are not perceptible source domains. Anything listed here is
+# cleared even if the model insists on it.
+invalid_source_terms:
+  - "道德"
+  - "倫理"
+  - "善惡"
+  - "正義"
+  - "錯誤"
+
+# Fold synonyms and English output back onto the canonical label.
+target_domain_aliases:
+  politician: "政治人物"
+  party: "政黨"
+  policy: "政策"
+  voter: "選民"
+  supporters: "支持者群體"
+  ideology: "政治主張"
+  political system: "政治制度"
+  media: "媒體"
+
+source_domain_aliases:
+  war: "戰爭"
+  animal: "動物"
+  business: "商業"
+  religion: "宗教"
+  entertainment: "戲劇/娛樂"
+  theater: "戲劇/娛樂"
+  performer: "表演者"
+  actor: "表演者"
+  criminal: "犯罪者"
+  罪犯: "犯罪者"
+  黑道: "犯罪者"
+  流氓: "犯罪者"
+  object: "可操控的物件"
+  pressure: "物理力量"
+  cognition: "認知"
+  artifact: "人工物"

@@ -1,0 +1,19 @@
+# 金鑰絕不進版控
+.env
+.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# 使用者在工作目錄跑出來的產物
+out/
+annotations*.json
+mappings*.json
+*.csv
+*.html
+
+# macOS
+.DS_Store
