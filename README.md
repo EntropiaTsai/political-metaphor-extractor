@@ -2,6 +2,8 @@
 
 Political Metaphor Extractor（以下簡稱 **PME**）是一個 Agent Skill，用來從政治文本語料中抽取概念性隱喻，建立三層來源域本體，並產生統計與互動式視覺化。
 
+背後的分析方法論來自於開發者本人的相關研究：https://entropiatsai.github.io/sicol/index.html#/1
+
 **設計給研究者，不是給工程師。** 全程用對話操作：你把語料交給 AI 助理、用中文說你想做什麼，剩下的它會處理。你不需要寫程式、不需要輸入指令，也不需要看懂任何設定檔。
 
 它遵循 [Agent Skills 開放標準](https://agentskills.io)，不綁定特定模型或工具，Claude Code、Cursor、Codex 等會讀 `SKILL.md` 的 AI 助理都能用。
