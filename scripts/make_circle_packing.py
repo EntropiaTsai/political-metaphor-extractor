@@ -80,7 +80,10 @@ TEMPLATE = """<!DOCTYPE html>
 const DATA = __DATA__;
 const PALETTE = __PALETTE__;
 const SIZE = 660, MAX_EXAMPLES = 5;
-const GROUPS = Object.keys(DATA.groups);
+/* Not Object.keys(DATA.groups): JS hoists integer-like keys such as "2014"
+ * ahead of the rest, which would push "全部 (All)" to the end and open the
+ * page on the wrong group. */
+const GROUPS = DATA.order;
 const DEPTH_TINT = {1:0.76, 2:0.58, 3:0.38};
 const paper = getComputedStyle(document.body).backgroundColor || "#ffffff";
 let group = GROUPS[0];
@@ -317,7 +320,8 @@ def main():
             .replace("__TITLE__", title)
             .replace("__D3_SRC__", args.d3_src)
             .replace("__PALETTE__", json.dumps(palette, ensure_ascii=False))
-            .replace("__DATA__", json.dumps({"groups": groups}, ensure_ascii=False)))
+            .replace("__DATA__", json.dumps({"order": list(groups), "groups": groups},
+                                            ensure_ascii=False)))
 
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
