@@ -34,15 +34,15 @@
               v                     v                     v
         hierarchy.csv        stats_macro.csv        stats_mid.csv
               │
-              v
-      make_circle_packing.py ──> hierarchy.html（單一自足檔案）
+              ├──> make_circle_packing.py ──> hierarchy.html（單一自足檔案）
+              └──> make_pairing_diagram.py ──> pairing.html（單一自足檔案）
 
   stability_check.py（獨立分支，僅腳本模式）
       corpus ──> sample.jsonl ──> extract_tvg.py / map_domains.py 重跑 N 次
       ──> tvg_run{N}.csv、mapped_run{N}.csv ──> doc_jaccard.csv、source_distribution.csv
 ```
 
-兩種模式在 `mapped.csv` 匯流，之後的 `build_hierarchy.py` 與 `make_circle_packing.py` 完全共用，且純本機運算。
+兩種模式在 `mapped.csv` 匯流，之後的 `build_hierarchy.py` 與兩支繪圖腳本完全共用，且純本機運算。
 
 `validate_config.py` 不在資料流上，不讀寫任何資料檔。它只檢查 `config.yaml`、`taxonomy.yaml`、`hierarchy_rules.yaml` 與 `prompts/` 四者之間的一致性，有 error 時以 exit code 1 結束，適合在跑長任務前擋一道。
 
@@ -163,6 +163,10 @@
 兩張表都只統計 `is_residual_mid == "0"` 的列，**殘差桶完全不計入**，連帶也不計入 `ratio` 的分母。因此 `stats_macro.csv` 的 `count` 總和會小於 `hierarchy.csv` 的列數。排序為：先依 `group` 字典序，再依 `count` 遞減，最後依 key 欄位值字典序。
 
 `make_circle_packing.py` 讀 `hierarchy.csv`，同樣預設濾掉 `is_residual_mid == "1"`（`--include-residual` 可保留），用到的欄位為 `macro_source`、`mid_source`、`sub_source`、`evidence`、`tenor` 與 `--group-field` 指定的欄位。`--labels` 接受一個 JSON 物件檔，把原始標籤字串映射到顯示名稱，特殊 key `__root__` 是根節點標籤（可由 `--root-label` 設定）。
+
+`make_pairing_diagram.py` 讀同一份 `hierarchy.csv`、同樣的殘差過濾規則，但額外需要 **`mid_target`** 與 `vehicle`；缺 `mid_target` 會直接中止並提示先跑 `build_hierarchy.py`。它把資料沿目標軸切開：左欄是 `mid_target`、右欄是 `macro_source`（可就地展開成 `mid_source`），連線的權重是該組合的列數。`--labels` 吃的是**同一個 JSON 檔**，目標側與來源側的名稱共用一份對照表。兩支腳本的 macro 配色由 `sorted(set(macro_source))` 的順序決定且共用同一組色票，所以同一個來源域在兩張圖上顏色一致。
+
+兩支腳本產生的 HTML 都把分組順序寫在 `DATA.order`，而不是在瀏覽器端讀 `Object.keys(DATA.groups)`——JS 會把 `"2014"` 這種整數形式的 key 排到最前面，導致「全部 (All)」被擠到最後、開啟時停在錯誤的組別。
 
 ## Agent 模式的 JSON 格式
 

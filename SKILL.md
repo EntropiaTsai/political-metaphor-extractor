@@ -1,13 +1,13 @@
 ---
 name: political-metaphor-extractor
-description: 從政治文本語料中抽取概念性隱喻，建立 macro/mid/sub 三層來源域本體，並產生統計與可縮放的 circle packing 視覺化。採兩階段流程：先抽 Tenor/Vehicle/Ground 三元詞組，再獨立映射 domain。適用於使用者想從社群貼文、論壇留言、新聞或訪談逐字稿中做隱喻分析、批判論述分析、框架分析，或提到 conceptual metaphor、隱喻抽取、來源域、target domain、source domain、Tenor Vehicle Ground、CMT 時。
+description: 從政治文本語料中抽取概念性隱喻，建立 macro/mid/sub 三層來源域本體，並產生統計與兩種互動視覺化：可縮放的 circle packing（政治被比喻成什麼），以及 target-source 配對圖（誰被比喻成什麼）。採兩階段流程：先抽 Tenor/Vehicle/Ground 三元詞組，再獨立映射 domain。適用於使用者想從社群貼文、論壇留言、新聞或訪談逐字稿中做隱喻分析、批判論述分析、框架分析，或提到 conceptual metaphor、隱喻抽取、來源域、target domain、source domain、Tenor Vehicle Ground、CMT 時。
 ---
 
 # 政治隱喻抽取
 
 從一批政治文本中，抽出「用什麼概念在講政治」，並整理成可統計、可比較、可視覺化的三層結構。
 
-**產出**：每則隱喻一列的 CSV（含原始例句）→ 三層來源域本體 → 頻率統計表 → 互動式視覺化。
+**產出**：每則隱喻一列的 CSV（含原始例句）→ 三層來源域本體 → 頻率統計表 → 兩張互動式圖表（來源域階層、target-source 配對）。
 
 ## 對話原則
 
@@ -57,7 +57,7 @@ WORK=$(mktemp -d)/metaphor_tmp && mkdir -p "$WORK" && cd "$WORK"
 
 不管哪一種都用 `metaphor_` 開頭，日後 `ls -d metaphor_*` 就能一次找出全部來清理。
 
-**不要重複使用既有的 `metaphor_*` 目錄**，除非使用者明講要接續上次的工作。同名目錄裡的 `out/tvg.csv` 與 `out/mapped.csv` 會被無聲覆蓋，那是逐則標註的成果，重跑要重花時間與金錢，而且 `temperature` 設 0 也不保證逐字重現。相對地，`hierarchy.csv`、`stats_*.csv`、`hierarchy.html` 這些從 `mapped.csv` 幾秒就能重生的產物，覆蓋沒有關係——步驟 8 到 9 本來就要反覆重跑。
+**不要重複使用既有的 `metaphor_*` 目錄**，除非使用者明講要接續上次的工作。同名目錄裡的 `out/tvg.csv` 與 `out/mapped.csv` 會被無聲覆蓋，那是逐則標註的成果，重跑要重花時間與金錢，而且 `temperature` 設 0 也不保證逐字重現。相對地，`hierarchy.csv`、`stats_*.csv`、`hierarchy.html`、`pairing.html` 這些從 `mapped.csv` 幾秒就能重生的產物，覆蓋沒有關係——步驟 8 到 9 本來就要反覆重跑。
 
 ### 建立工作目錄
 
@@ -125,7 +125,7 @@ python3 -m venv .venv
 - [ ] 7. ingest 成 mapped.csv，處理被拒絕的標籤
 - [ ] 8. 寫中層規則並建立三層本體
 - [ ] 9. 檢查殘差桶，回頭補規則
-- [ ] 10. 產生視覺化
+- [ ] 10. 產生視覺化（圓圈打包圖與配對圖，兩張都要）
 ```
 
 ### 步驟 2：改寫語料脈絡
@@ -267,28 +267,41 @@ mid_source:
 
 ### 步驟 10：視覺化
 
+**兩張圖都要產**。它們吃同一份 `hierarchy.csv`，但回答的是不同的問題，只給一張會漏掉一半的結果。
+
 ```bash
 .venv/bin/python <skill>/scripts/make_circle_packing.py --input out/hierarchy.csv \
     --output out/hierarchy.html --title "政治隱喻來源域"
+
+.venv/bin/python <skill>/scripts/make_pairing_diagram.py --input out/hierarchy.csv \
+    --output out/pairing.html --title "誰被比喻成什麼"
 ```
 
-*(註：只有在啟用分組比較時，才需要加入 `--group-field 欄位名`。在沒有指定分組時，網頁中的圓圈打包圖與麵包屑會預設以動態名稱「全部 (All)」作為最上層的根節點標題)*
+*(註：只有在啟用分組比較時，才需要加入 `--group-field 欄位名`，兩支都要加。沒有指定分組時，兩張圖都會以「全部 (All)」作為唯一組別，切換鈕自動隱藏)*
 
 產生後直接幫使用者打開，不要只回報路徑：
 
 ```bash
-open out/hierarchy.html        # Linux 用 xdg-open
+open out/hierarchy.html out/pairing.html        # Linux 用 xdg-open
 ```
 
-單一 HTML 檔，點圓圈往下鑽一層，點背景往上退，第三層列出原始例句。`--group-field` 會生出切換鈕做跨組比較（如不同年份）。這些操作方式要主動講給使用者聽，他不會自己猜到可以點。
+**`hierarchy.html`（圓圈打包圖）回答「政治被比喻成什麼」**：點圓圈往下鑽一層，點背景往上退，第三層列出原始例句。
 
-離線展示時用 `--d3-src ./d3.v7.min.js` 指向本機 d3，預設走 CDN。
+**`pairing.html`（配對圖）回答「誰被比喻成什麼」**：左邊是被比喻的對象（`mid_target`），右邊是來源域，線的粗細是筆數。點任一邊會highlight它配到的東西、右側列出佔比；點右邊的來源域會**就地展開成中層**（動物 → 猴／鳥／狗／畜牲），其他域留在原位；點一條線會列出那一組的原始例句，句中的 vehicle 有標色。
+
+**為什麼兩張都要**：圓圈打包圖把所有被比喻對象混成一團，只看得到「政治是動物」。配對圖會露出**比喻其實是有分工的**——同一份資料裡，支持者被講成猴和鳥、政治人物被講成狗，兩邊幾乎不重疊。這種分工在圓圈打包圖上完全看不出來，而它往往是使用者最想要的發現。
+
+這些操作方式**要主動講給使用者聽**，他不會自己猜到可以點、更不會猜到來源域可以展開。
+
+離線展示時兩支都用 `--d3-src ./d3.v7.min.js` 指向本機 d3，預設走 CDN。
+
+配對圖的其他選項：`--max-open` 控制展開一個來源域時顯示幾個中層類別（預設 8，其餘併成一個 Other 桶）、`--label-width` 調左右兩側留給標籤的寬度（預設 216 px，標籤被切掉就加大）。
 
 ### 步驟 11：交付與收尾
 
 不論使用者選哪一種保存方式，都把 `stats_macro.csv` 與 `stats_mid.csv` 的內容整理成表格直接貼在對話裡，並附上殘差比例與被拒絕的標籤數量。使用者要看的是結論，不是一句「檔案在那邊，自己去開」。
 
-選了**保存**的，最後回報工作目錄的絕對路徑，並列出裡面哪幾個檔案是他之後會用到的（`hierarchy.csv` 給後續分析、`hierarchy.html` 給簡報、三個設定檔給論文附錄）。
+選了**保存**的，最後回報工作目錄的絕對路徑，並列出裡面哪幾個檔案是他之後會用到的（`hierarchy.csv` 給後續分析、`hierarchy.html` 與 `pairing.html` 給簡報、三個設定檔給論文附錄）。
 
 選了**看過就好**的，先把 HTML 開起來給他看，等他確認看完，再刪掉整個 `metaphor_*` 暫存目錄並回報已清理。刪之前多問一句「有沒有要留下來的？」——他有可能看完才改變主意，這時把目錄搬到他指定的位置即可，不要重跑一次。
 
