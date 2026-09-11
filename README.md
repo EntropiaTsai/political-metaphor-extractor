@@ -8,9 +8,9 @@ Political Metaphor Extractor（以下簡稱 **PME**）是一個 Agent Skill，�
 
 以下為實際執行此 Skill 的完整對話與產出流程（包含隱喻標註、指派來源域、撰寫中層規則、產生互動式圓圈打包圖）：
 
-<video src="https://github.com/EntropiaTsai/political-metaphor-extractor/raw/main/assets/demo.mp4" width="100%" controls></video>
+[![PME 實際運行示範影片](https://img.youtube.com/vi/FYQF73CzfMI/0.jpg)](https://youtu.be/FYQF73CzfMI)
 
-*(註：若您的瀏覽器不支援直接播放 HTML5 影片，可直接點擊 [assets/demo.mp4](assets/demo.mp4) 檔案觀看)*
+*(註：您可以點擊上方預覽圖或點擊 [YouTube 示範影片連結](https://youtu.be/FYQF73CzfMI) 直接線上觀看)*
 
 **設計給研究者，不是給工程師。** 全程用對話操作：你把語料交給 AI 助理、用中文說你想做什麼，剩下的它會處理。你不需要寫程式、不需要輸入指令，也不需要看懂任何設定檔。
 
